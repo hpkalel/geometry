@@ -1,5 +1,7 @@
+"use client";
+
 import React from 'react';
-import './styles.css';
+import { trackAnalytics } from './analytics.js';
 
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef;
 var CX=300,YB=400,H=280,R=130,K=0.42,APEX=YB-H,HU=6,RU=3;
@@ -930,17 +932,36 @@ var NAV=[
   {id:"a",label:"\u00c0 venir",icon:"dot",soon:[["Cylindre","cylinder"],["Sph\u00e8re","sphere"]]}
 ];
 function Shell(){
-  var _g=useState(function(){try{var k=location.hash.slice(1);return ["cone","pyramide","patron","pave","volume","pyr","cyl","prisme"].indexOf(k)>=0?k:"cone";}catch(e){return "cone";}}),pg=_g[0],setPg=_g[1];
-  var _m=useState(function(){try{if(window.innerWidth<=760)return false;return localStorage.getItem("sb")!=="0";}catch(e){return true;}}),op=_m[0],setOp=_m[1];
+  var _g=useState("cone"),pg=_g[0],setPg=_g[1];
+  var _m=useState(true),op=_m[0],setOp=_m[1];
+  var _ready=useState(false),ready=_ready[0],setReady=_ready[1];
   var _o=useState({}),og=_o[0],setOg=_o[1];
+  var trackedPage=useRef(null);
   function mobile(){try{return window.innerWidth<=760;}catch(e){return false;}}
   function go(k){setPg(k);try{history.replaceState(null,"","#"+k);}catch(e){}if(mobile())setOp(false);}
   function toggleG(id){setOg(function(o){var n=Object.assign({},o);n[id]=!o[id];return n;});}
   function openG(id){setOp(true);setOg(function(o){var n=Object.assign({},o);n[id]=false;return n;});}
+  useEffect(function(){
+    var k=window.location.hash.slice(1);
+    if(["cone","pyramide","patron","pave","volume","pyr","cyl","prisme"].indexOf(k)>=0)setPg(k);
+    try{setOp(window.innerWidth<=760?false:localStorage.getItem("sb")!=="0");}catch(e){setOp(window.innerWidth>760);}
+    setReady(true);
+  },[]);
+  useEffect(function(){if(ready&&trackedPage.current!==pg){trackedPage.current=pg;trackAnalytics("page_view",pg);}},[pg,ready]);
   useEffect(function(){try{if(!mobile())localStorage.setItem("sb",op?"1":"0");}catch(e){}},[op]);
   useEffect(function(){function k(e){if(e.key==="Escape"&&mobile())setOp(false);}window.addEventListener("keydown",k);return function(){window.removeEventListener("keydown",k);};},[]);
-  var _th=useState(function(){try{var t0=localStorage.getItem("theme");if(t0==="dark"||t0==="light")return t0;}catch(e){}return "dark";}),th=_th[0],setTh=_th[1];
-  useEffect(function(){try{document.documentElement.setAttribute("data-theme",th);}catch(e){}try{localStorage.setItem("theme",th);}catch(e){}},[th]);
+  var _th=useState("dark"),th=_th[0],setTh=_th[1];
+  useEffect(function(){
+    var initialTheme="dark";
+    try{
+      var savedTheme=localStorage.getItem("theme");
+      if(savedTheme==="dark"||savedTheme==="light")initialTheme=savedTheme;
+    }catch(e){}
+    setTh(initialTheme);
+    document.documentElement.setAttribute("data-theme",initialTheme);
+    try{localStorage.setItem("theme",initialTheme);}catch(e){}
+  },[]);
+  function toggleTheme(){var nextTheme=th==="dark"?"light":"dark";setTh(nextTheme);document.documentElement.setAttribute("data-theme",nextTheme);try{localStorage.setItem("theme",nextTheme);}catch(e){}}
   var dk=th==="dark";
   function mk(it){var on=pg===it[0];return h("button",{key:it[0],className:"nv"+(on?" on":""),"aria-current":on?"page":undefined,"aria-label":it[1],title:it[1],onClick:function(){go(it[0]);}},h("span",null,it[1]));}
   function toggleBtn(lbl){return h("button",{className:"sbtn","aria-label":op?"Fermer le menu":"Ouvrir le menu","aria-expanded":op,title:op?"Fermer le menu":"Ouvrir le menu",onClick:function(){setOp(!op);}},ICONS.panel());}
@@ -950,7 +971,7 @@ function Shell(){
       h("div",{className:"sb-top"},
         toggleBtn(),
         h("span",{className:"brand"},"Geometry"),
-        h("button",{className:"sbtn theme-toggle",title:dk?"Passer en mode clair":"Passer en mode sombre","aria-label":dk?"Passer en mode clair":"Passer en mode sombre",onClick:function(){setTh(dk?"light":"dark");}},dk?ICONS.sun():ICONS.moon())
+        h("button",{className:"sbtn theme-toggle",title:dk?"Passer en mode clair":"Passer en mode sombre","aria-label":dk?"Passer en mode clair":"Passer en mode sombre",onClick:toggleTheme},dk?ICONS.sun():ICONS.moon())
       ),
       h("div",{className:"sb-body"},
         NAV.map(function(gr){
@@ -966,9 +987,9 @@ function Shell(){
       !op?h("header",{className:"desktop-header"},
         h("button",{className:"sbtn","aria-label":"Ouvrir le menu","aria-expanded":false,title:"Ouvrir le menu",onClick:function(){setOp(true);}},ICONS.panel()),
         h("span",{className:"brand"},"Geometry"),
-        h("button",{className:"sbtn theme-toggle",title:dk?"Passer en mode clair":"Passer en mode sombre","aria-label":dk?"Passer en mode clair":"Passer en mode sombre",onClick:function(){setTh(dk?"light":"dark");}},dk?ICONS.sun():ICONS.moon())
+        h("button",{className:"sbtn theme-toggle",title:dk?"Passer en mode clair":"Passer en mode sombre","aria-label":dk?"Passer en mode clair":"Passer en mode sombre",onClick:toggleTheme},dk?ICONS.sun():ICONS.moon())
       ):null,
-      h("div",{className:"w"},h(pg==="pyramide"?PyramidApp:pg==="prisme"?PrismeApp:pg==="cyl"?ConeVolApp:pg==="pyr"?PyrVolApp:pg==="volume"?VolumeApp:pg==="patron"?PatronApp:pg==="pave"?PaveApp:ConeApp)))
+      h("div",{className:"w",onClick:function(e){if(e.target.closest("button"))trackAnalytics("simulation_interaction",pg);},onChange:function(){trackAnalytics("simulation_interaction",pg);}},h(pg==="pyramide"?PyramidApp:pg==="prisme"?PrismeApp:pg==="cyl"?ConeVolApp:pg==="pyr"?PyrVolApp:pg==="volume"?VolumeApp:pg==="patron"?PatronApp:pg==="pave"?PaveApp:ConeApp)))
   );
 }
 export default Shell;
